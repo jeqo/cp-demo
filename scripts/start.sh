@@ -22,6 +22,9 @@ openssl rsa -in ./conf/keypair.pem -outform PEM -pubout -out ./conf/public.pem
 # Bring up base cluster and Confluent CLI
 docker-compose up -d zookeeper kafka1 kafka2 tools
 
+# Bring up tracing infra
+docker-compose up -d zipkin
+
 # Verify Kafka brokers have started
 MAX_WAIT=30
 echo "Waiting up to $MAX_WAIT seconds for Kafka brokers to be registered in ZooKeeper"
