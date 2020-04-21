@@ -1010,6 +1010,33 @@ to setup alerts from there.
       :alt: image
 
 
+Tracing
+-------
+
+#. To visualize traces generated the dataflow open `Zipkin <http://localhost:9411>` 
+   and search for some traces, and recognize the components involved on each instance:
+
+   .. figure:: images/tracing-search-traces.png
+      :alt: image
+
+#. To check a specific trace, clic on one to open up the trace view:
+
+   .. figure:: images/tracing-trace-view.png
+      :alt: image
+
+#. Tags record metadata related to the trace, e.g. "kafka.topic":
+
+   .. figure:: images/tracing-second-trace.png
+      :alt: image
+
+   .. figure:: images/tracing-third-trace.png
+      :alt: image
+
+#. A Dependencies graph help to understand the whole dataflow:
+
+   .. figure:: images/tracing-dependencies.gif
+      :alt: image
+
 ===============
 Troubleshooting
 ===============
