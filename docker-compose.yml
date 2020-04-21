@@ -323,6 +323,8 @@ services:
       - mi3:/usr/share/java/kafka-connect-replicator/
       - ./scripts/security:/etc/kafka/secrets
       - ./conf:/tmp/conf
+      - ./interceptors/brave-kafka-interceptor-0.5.5-SNAPSHOT.jar:/etc/kafka-connect/jars/brave-kafka-interceptor.jar
+
     command: "bash -c 'sleep 10 && \
               cp /usr/share/java/kafka-connect-replicator/replicator-rest-extension-*.jar /etc/kafka-connect/jars/ && \
               /etc/confluent/docker/run'"
@@ -372,13 +374,16 @@ services:
       CONNECT_PRODUCER_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.keystore.jks
       CONNECT_PRODUCER_SSL_KEYSTORE_PASSWORD: confluent
       CONNECT_PRODUCER_SSL_KEY_PASSWORD: confluent
-      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor,brave.kafka.interceptor.TracingProducerInterceptor"
       CONNECT_PRODUCER_CONFLUENT_MONITORING_INTERCEPTOR_SECURITY_PROTOCOL: SASL_SSL
       CONNECT_PRODUCER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.truststore.jks
       CONNECT_PRODUCER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_TRUSTSTORE_PASSWORD: confluent
       CONNECT_PRODUCER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.keystore.jks
       CONNECT_PRODUCER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEYSTORE_PASSWORD: confluent
       CONNECT_PRODUCER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEY_PASSWORD: confluent
+      CONNECT_PRODUCER_ZIPKIN_SENDER_TYPE: HTTP
+      CONNECT_PRODUCER_ZIPKIN_HTTP_ENDPOINT: http://zipkin:9411/api/v2/spans
+      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: kafka-connect-source
 
       # Connect Consumer
       CONNECT_CONSUMER_SECURITY_PROTOCOL: SASL_SSL
@@ -387,13 +392,16 @@ services:
       CONNECT_CONSUMER_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.keystore.jks
       CONNECT_CONSUMER_SSL_KEYSTORE_PASSWORD: confluent
       CONNECT_CONSUMER_SSL_KEY_PASSWORD: confluent
-      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor,brave.kafka.interceptor.TracingConsumerInterceptor"
       CONNECT_CONSUMER_CONFLUENT_MONITORING_INTERCEPTOR_SECURITY_PROTOCOL: SASL_SSL
       CONNECT_CONSUMER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.truststore.jks
       CONNECT_CONSUMER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_TRUSTSTORE_PASSWORD: confluent
       CONNECT_CONSUMER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.keystore.jks
       CONNECT_CONSUMER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEYSTORE_PASSWORD: confluent
       CONNECT_CONSUMER_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEY_PASSWORD: confluent
+      CONNECT_CONSUMER_ZIPKIN_SENDER_TYPE: HTTP
+      CONNECT_CONSUMER_ZIPKIN_HTTP_ENDPOINT: http://zipkin:9411/api/v2/spans
+      CONNECT_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: kafka-connect-sink
 
       # RBAC
       CONNECT_SASL_MECHANISM: 'OAUTHBEARER'
@@ -713,6 +721,7 @@ services:
       - ./conf:/tmp/conf
       - ./scripts/helper:/tmp/helper
       - ./scripts/security:/etc/kafka/secrets
+      - ./interceptors/brave-kafka-interceptor-0.5.5-SNAPSHOT.jar:/usr/share/java/ksql-server/brave-kafka-interceptor.jar
     ports:
       - 8088:8088
     environment:
@@ -779,8 +788,8 @@ services:
       KSQL_KSQL_SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO: ksqlAdmin:ksqlAdmin
 
       # Confluent Monitoring Interceptors for Control Center streams monitoring
-      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
-      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"    
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor,brave.kafka.interceptor.TracingProducerInterceptor"
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor,brave.kafka.interceptor.TracingConsumerInterceptor"    
       KSQL_CONFLUENT_MONITORING_INTERCEPTOR_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.ksqlserver.truststore.jks
       KSQL_CONFLUENT_MONITORING_INTERCEPTOR_SSL_TRUSTSTORE_PASSWORD: confluent
       KSQL_CONFLUENT_MONITORING_INTERCEPTOR_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.ksqlserver.keystore.jks
@@ -794,6 +803,9 @@ services:
               username="ksqlAdmin" \
               password="ksqlAdmin" \
               metadataServerUrls="http://kafka1:8091,http://kafka2:8092";
+      KSQL_ZIPKIN_SENDER_TYPE: HTTP
+      KSQL_ZIPKIN_HTTP_ENDPOINT: http://zipkin:9411/api/v2/spans
+      KSQL_ZIPKIN_LOCAL_SERVICE_NAME: ksql
 
   ksql-cli:
     image: confluentinc/cp-ksql-cli:5.4.1
@@ -907,6 +919,13 @@ services:
       - ./env_files/streams-demo.env
     environment:
       KAFKA_REPLICATION_FACTOR: 2
+
+  zipkin:
+    image: openzipkin/zipkin:2.21
+    environment:
+      STORAGE_TYPE: mem
+    ports:
+      - 9411:9411
 
 volumes:
     mi3: {}
